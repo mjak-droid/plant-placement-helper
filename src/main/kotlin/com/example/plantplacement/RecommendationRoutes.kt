@@ -68,12 +68,26 @@ fun Application.recommendationRoutes(engine: RecommendationEngine) {
 }
 
 private fun validateRequest(request: RecommendationRequest): String? {
-    if (request.mode != "suggest") return "This endpoint currently accepts plant suggestions only."
-    val preferences = request.preferences ?: return "Plant preferences are required."
-    if (preferences.careLevel !in setOf("easy", "more-care")) return "Choose a valid care level."
-    if (preferences.plantSize !in setOf("small", "medium", "large")) return "Choose a valid plant size."
-    if (preferences.likedPlantTypes.length > 300) return "Plant preferences are too long."
-    return validateImage(request.spacePhoto, "Choose a supported, clear room photo.")
+    val spacePhotoError = validateImage(request.spacePhoto, "Choose a supported, clear room photo.")
+    if (spacePhotoError != null) return spacePhotoError
+
+    return when (request.mode) {
+        "suggest" -> {
+            val preferences = request.preferences ?: return "Plant preferences are required."
+            if (preferences.careLevel !in setOf("easy", "more-care")) return "Choose a valid care level."
+            if (preferences.plantSize !in setOf("small", "medium", "large")) return "Choose a valid plant size."
+            if (preferences.likedPlantTypes.length > 300) return "Plant preferences are too long."
+            null
+        }
+        "existing" -> {
+            if (request.plantName.isNullOrBlank() && request.plantPhoto == null) {
+                return "Enter the plant name or add a photo of the plant."
+            }
+            if (request.plantName != null && request.plantName.length > 120) return "Plant name is too long."
+            request.plantPhoto?.let { validateImage(it, "Choose a supported plant photo.") }
+        }
+        else -> "Choose a valid recommendation type."
+    }
 }
 
 private fun validateImage(image: ImageInput, message: String): String? {

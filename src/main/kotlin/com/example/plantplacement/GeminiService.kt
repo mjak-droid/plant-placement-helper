@@ -83,12 +83,18 @@ class GeminiService(
         ): JsonObject {
             val prompt = buildString {
                 append("You are a careful houseplant placement assistant. Analyze the room photo and return JSON only. ")
-                append("Recommend plants that may suit visible conditions. Still photos cannot establish daily sunlight; clearly describe lighting as an estimate. ")
+                if (mode == "existing") {
+                    append("The user wants help placing a plant they already own. Recommend the best visible spot for that plant, and explain any likely mismatch or care concern cautiously. ")
+                    append("If the plant may not suit the room, include a few better-suited alternative plant recommendations after the existing plant. ")
+                } else {
+                    append("Recommend plants that may suit visible conditions and the user's preferences. ")
+                }
+                append("Still photos cannot establish daily sunlight; clearly describe lighting as an estimate. ")
                 append("If the photo is too unclear to assess, set unclear=true and recommendations=[]; do not guess. ")
                 append("Set highlight x/y/width/height to normalized values in the 0..1 range and keep the rectangle inside the image. ")
                 append("Return JSON with keys unclear and recommendations. Each recommendation has id, title, summary, explanation, and highlight. ")
                 append("Each highlight has x, y, width, height (numbers) and label (short string). ")
-                append("Mode: $mode.\n")
+                append("For the first recommendation, use the plant or result title and label the best available spot on the room photo. Mode: $mode.\n")
                 preferences?.let {
                     append("Preferences: care=${it.careLevel}; size=${it.plantSize}; pet-safe-required=${it.petFriendly}; liked types=${it.likedPlantTypes}.\n")
                 }

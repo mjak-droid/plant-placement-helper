@@ -74,11 +74,11 @@ class RecommendationRoutesTest {
         val response = client.post("/api/recommendations") {
             contentType(ContentType.Application.Json)
             header(HttpHeaders.Accept, ContentType.Application.Json.toString())
-            setBody("""{"mode":"existing","spacePhoto":{"mimeType":"image/jpeg","data":"AQ=="},"preferences":{"careLevel":"easy","plantSize":"small","petFriendly":false}}""")
+            setBody("""{"mode":"unsupported","spacePhoto":{"mimeType":"image/jpeg","data":"AQ=="},"preferences":{"careLevel":"easy","plantSize":"small","petFriendly":false}}""")
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(
-            "This endpoint currently accepts plant suggestions only.",
+            "Choose a valid recommendation type.",
             Json.parseToJsonElement(response.bodyAsText()).jsonObject["error"]!!.jsonPrimitive.content,
         )
     }
@@ -98,6 +98,45 @@ class RecommendationRoutesTest {
             setBody("""{"mode":"suggest","spacePhoto":{"mimeType":"image/svg+xml","data":"AQ=="},"preferences":{"careLevel":"easy","plantSize":"small","petFriendly":false}}""")
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun existingPlantModeRequiresPlantNameOrPhoto() = testApplication {
+        application {
+            install(ContentNegotiation) { json() }
+            recommendationRoutes(object : RecommendationEngine {
+                override suspend fun recommend(request: RecommendationRequest) = error("Gemini must not be called")
+            })
+        }
+
+        val response = client.post("/api/recommendations") {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            setBody("""{"mode":"existing","spacePhoto":{"mimeType":"image/jpeg","data":"AQ=="}}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertContains(response.bodyAsText(), "Enter the plant name")
+    }
+
+    @Test
+    fun existingPlantModeAcceptsPlantName() = testApplication {
+        application {
+            install(ContentNegotiation) { json() }
+            recommendationRoutes(object : RecommendationEngine {
+                override suspend fun recommend(request: RecommendationRequest): RecommendationResponse {
+                    assertEquals("existing", request.mode)
+                    assertEquals("Monstera", request.plantName)
+                    return RecommendationResponse(unclear = true, recommendations = emptyList())
+                }
+            })
+        }
+
+        val response = client.post("/api/recommendations") {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            setBody("""{"mode":"existing","spacePhoto":{"mimeType":"image/jpeg","data":"AQ=="},"plantName":"Monstera"}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
