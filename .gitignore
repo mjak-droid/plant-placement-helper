@@ -1,0 +1,22 @@
+devpost/learner-profile.md
+devpost/
+.agents/
+.claude/
+agent/
+skills-lock.json
+backend.zip
+.env
+.env.*
+!.env.example
+
+# Local Android/Gradle configuration and generated outputs
+/local.properties
+/.gradle/
+/.idea/
+**/build/
+*.iml
+/captures/
+
+# Signing credentials
+*.jks
+*.keystore
